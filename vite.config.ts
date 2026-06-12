@@ -1,11 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/react-swc';
+import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/EasyLesson/',
+    base: './', // Для гнучкого деплою на будь-якому сервері
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
