@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, BookOpen, User, HelpCircle, Loader } from "lucide-react";
 import { ChatMessage, Textbook } from "../types";
+import { getApiUrl } from "../utils/api";
 
 interface TutorChatViewProps {
   pageText: string;
@@ -70,7 +71,7 @@ export default function TutorChatView({ pageText, subject, bookTitle }: TutorCha
           text: m.text
         }));
 
-      const response = await fetch("/api/tutor-chat", {
+      const response = await fetch(getApiUrl("/api/tutor-chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

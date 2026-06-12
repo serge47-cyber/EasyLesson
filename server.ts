@@ -102,6 +102,24 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Enable CORS middleware safely to allow GitHub Pages requests to utilize the Render server API
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && (origin.indexOf("github.io") !== -1 || origin.indexOf("localhost") !== -1 || origin.indexOf("render.com") !== -1)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // JSON and UrlEncoded parsers with higher limits for large textbook assets
   app.use(express.json({ limit: '100mb' }));
   app.use(express.urlencoded({ extended: true, limit: '100mb' }));

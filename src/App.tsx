@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Textbook, GeneratedLesson } from "./types";
+import { getApiUrl } from "./utils/api";
 
 // Import custom views
 import ThesesView from "./components/ThesesView";
@@ -322,7 +323,7 @@ export default function App() {
         formData.append("subject", uploadSubject);
         formData.append("grade", uploadGrade);
 
-        const response = await fetch("/api/upload", {
+        const response = await fetch(getApiUrl("/api/upload"), {
           method: "POST",
           body: formData,
         });
@@ -400,7 +401,7 @@ export default function App() {
     const fullPageText = pageTextCollection.join("\n\n");
 
     try {
-      const response = await fetch("/api/generate-lesson", {
+      const response = await fetch(getApiUrl("/api/generate-lesson"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
