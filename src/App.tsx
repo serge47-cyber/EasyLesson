@@ -14,7 +14,9 @@ import {
   Settings,
   HelpCircle,
   FilePlus,
-  Loader
+  Loader,
+  Trash2,
+  RefreshCcw
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Textbook, GeneratedLesson } from "./types";
@@ -79,6 +81,20 @@ export default function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState("gemini-3.5-flash");
 
+  // Local storage for hidden default books
+  const [hiddenBookIds, setHiddenBookIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedHidden = localStorage.getItem("ai_methodologist_hidden_books");
+    if (savedHidden) {
+      try {
+        setHiddenBookIds(JSON.parse(savedHidden));
+      } catch (err) {
+        console.error("Error parsing hidden books list:", err);
+      }
+    }
+  }, []);
+
   // Local storage cache for persistence of custom textbooks
   useEffect(() => {
     const savedBooksJson = localStorage.getItem("ai_methodologist_books");
@@ -96,7 +112,46 @@ export default function App() {
     }
   }, []);
 
-  const activeBook = textbooks.find((b) => b.id === selectedBookId) || textbooks[0];
+  const visibleTextbooks = textbooks.filter(book => !hiddenBookIds.includes(book.id));
+  const activeBook = visibleTextbooks.find((b) => b.id === selectedBookId) || visibleTextbooks[0];
+
+  // Auto-adjust selectedBookId and page limits when list alters
+  useEffect(() => {
+    if (visibleTextbooks.length > 0) {
+      const isStillAvailable = visibleTextbooks.some(b => b.id === selectedBookId);
+      if (!isStillAvailable) {
+        setSelectedBookId(visibleTextbooks[0].id);
+      }
+    } else {
+      setSelectedBookId("");
+    }
+  }, [hiddenBookIds, textbooks]);
+
+  const handleDeleteBook = (bookId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isDefaultBook = bookId.startsWith("hist") || bookId.startsWith("phys");
+
+    if (isDefaultBook) {
+      const updatedHidden = [...hiddenBookIds, bookId];
+      setHiddenBookIds(updatedHidden);
+      localStorage.setItem("ai_methodologist_hidden_books", JSON.stringify(updatedHidden));
+    } else {
+      const updatedBooks = textbooks.filter(b => b.id !== bookId);
+      setTextbooks(updatedBooks);
+      const customBooks = updatedBooks.filter(b => !DEFAULT_TEXTBOOKS.some(db => db.id === b.id));
+      localStorage.setItem("ai_methodologist_books", JSON.stringify(customBooks));
+    }
+
+    if (selectedBookId === bookId) {
+      setGeneratedLesson(null);
+    }
+  };
+
+  const handleRestoreDemoBooks = () => {
+    setHiddenBookIds([]);
+    localStorage.removeItem("ai_methodologist_hidden_books");
+    setSelectedBookId("phys-11");
+  };
 
   // Auto-adjust pages context when active book changes
   useEffect(() => {
@@ -506,48 +561,93 @@ export default function App() {
 
             {/* Dropdown / shelf list */}
             {!showUploadForm ? (
-              <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                {textbooks.map((book) => {
-                  const isSelected = book.id === selectedBookId;
-                  const isDefaultBook = book.id.startsWith("hist") || book.id.startsWith("phys");
-
-                  return (
-                    <div
-                      id={`book-item-${book.id}`}
-                      key={book.id}
-                      onClick={() => {
-                        setSelectedBookId(book.id);
-                        if (generatedLesson) {
-                          // Clear because book changed, user should generate new one
-                          setGeneratedLesson(null);
-                        }
-                      }}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-3 ${
-                        isSelected 
-                          ? "border-sky-500 bg-sky-955/10 bg-slate-850" 
-                          : "border-slate-800/80 bg-slate-900/60 hover:border-slate-700"
-                      }`}
-                    >
-                      <div className={`p-2 rounded-lg ${isSelected ? "bg-sky-500/20 text-sky-300" : "bg-slate-800 text-slate-400"} flex-shrink-0`}>
-                        <BookOpen className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold font-mono text-slate-500 bg-slate-800 border border-slate-700/60 px-1.5 py-0.1 rounded-md">
-                            Клас {book.grade}
-                          </span>
-                          {isDefaultBook && (
-                            <span className="text-[9px] font-bold font-sans text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.1 rounded-md select-none">
-                              ДЕМО ШІ
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="text-xs md:text-sm font-bold text-slate-200 truncate">{book.title}</h4>
-                        <p className="text-[10px] text-slate-400">{book.subject} • {book.totalPages} стор.</p>
-                      </div>
+              <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
+                {visibleTextbooks.length === 0 ? (
+                  <div className="text-center py-6 px-4 border border-dashed border-slate-850 rounded-xl bg-slate-950/20 space-y-3">
+                    <p className="text-xs text-slate-400 leading-relaxed">Полиця порожня. Усі підручники приховано або видалено.</p>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={handleRestoreDemoBooks}
+                        className="w-full py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <RefreshCcw className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Відновити демо-книги</span>
+                      </button>
+                      <button
+                        onClick={() => setShowUploadForm(true)}
+                        className="w-full py-1.5 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs cursor-pointer transition-colors"
+                      >
+                        Завантажити новий PDF
+                      </button>
                     </div>
-                  );
-                })}
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {visibleTextbooks.map((book) => {
+                        const isSelected = book.id === selectedBookId;
+                        const isDefaultBook = book.id.startsWith("hist") || book.id.startsWith("phys");
+
+                        return (
+                          <div
+                            id={`book-item-${book.id}`}
+                            key={book.id}
+                            onClick={() => {
+                              setSelectedBookId(book.id);
+                              if (generatedLesson) {
+                                // Clear because book changed, user should generate new one
+                                setGeneratedLesson(null);
+                              }
+                            }}
+                            className={`group p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-2.5 relative ${
+                              isSelected 
+                                ? "border-sky-500 bg-sky-955/10 bg-slate-850" 
+                                : "border-slate-800/80 bg-slate-900/60 hover:border-slate-700"
+                            }`}
+                          >
+                            <div className={`p-2 rounded-lg ${isSelected ? "bg-sky-500/20 text-sky-300" : "bg-slate-800 text-slate-400"} flex-shrink-0`}>
+                              <BookOpen className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1 pr-6">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold font-mono text-slate-500 bg-slate-850 border border-slate-800 px-1.5 py-0.1 rounded-md">
+                                  Клас {book.grade}
+                                </span>
+                                {isDefaultBook && (
+                                  <span className="text-[9px] font-bold font-sans text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.1 rounded-md select-none">
+                                    ДЕМО ШІ
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="text-xs md:text-sm font-bold text-slate-200 truncate">{book.title}</h4>
+                              <p className="text-[10px] text-slate-400">{book.subject} • {book.totalPages} стор.</p>
+                            </div>
+                            
+                            {/* Delete/Hide button */}
+                            <button
+                              id={`delete-book-btn-${book.id}`}
+                              onClick={(e) => handleDeleteBook(book.id, e)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 rounded-md transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                              title={isDefaultBook ? "Приховати цей демо-підручник" : "Видалити завантажений підручник"}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {hiddenBookIds.length > 0 && (
+                      <button
+                        onClick={handleRestoreDemoBooks}
+                        className="w-full mt-2.5 py-1.5 border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl text-[11px] text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <RefreshCcw className="w-3 h-3 text-cyan-400" />
+                        <span>Відновити приховані демо-книги ({hiddenBookIds.length})</span>
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             ) : (
               /* Toggle PDF Upload view */
