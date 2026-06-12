@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-850: #1e293b; /* Premium slate containers */
+  --color-slate-805: #0f172a; /* Deep slate boundaries */
+  --color-slate-905: #090f1e; /* High contrast sidebar bg */
+  --color-slate-910: #020617; /* Immersion deep space blue canvas */
+}
+
+/* 3D perspective styles for Flashcards */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotateY-180 {
+  transform: rotateY(180deg);
+}
+
+/* Custom styles for layout precision */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
