@@ -32,13 +32,13 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // JSON and UrlEncoded parsers
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // JSON and UrlEncoded parsers with higher limits for large textbook assets
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 30 * 1024 * 1024 } // Limit PDF to 30MB
+    limits: { fileSize: 100 * 1024 * 1024 } // Limit PDF to 100MB safely
   });
 
   // REST API Endpoints
@@ -279,6 +279,24 @@ ${pageText || "Текст сторінок підручника недоступ
       console.error("AI Tutor Chat error:", error);
       res.status(500).json({ error: "Помилка Тьютора: " + (error.message || error) });
     }
+  });
+
+  // Global Express Error Handling Middleware (Catches Multer size limits or other issues)
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Global express error handler:", err);
+    
+    // Customize Multer-specific error codes
+    let status = err.status || 500;
+    let errorMessage = err.message || "Внутрішня помилка сервера при обробці запиту";
+    
+    if (err.code === "LIMIT_FILE_SIZE") {
+      status = 413;
+      errorMessage = "Файл занадто великий. Максимальний дозволений розмір файлу — 100 МБ.";
+    }
+
+    res.status(status).json({
+      error: errorMessage
+    });
   });
 
   // Serve Frontend Assets using Vite

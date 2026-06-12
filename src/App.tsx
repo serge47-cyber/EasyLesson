@@ -65,6 +65,7 @@ export default function App() {
   
   // PDF upload state
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadSubject, setUploadSubject] = useState("Фізика");
   const [uploadGrade, setUploadGrade] = useState("10");
@@ -167,32 +168,116 @@ export default function App() {
     }
   };
 
-  // Perform Textbook File Upload
+  // Perform client-side PDF parsing using pdf.js from CDN
+  const parsePdfClientSide = (file: File, onProgress: (msg: string) => void): Promise<Textbook> => {
+    return new Promise((resolve, reject) => {
+      const scriptId = "pdfjs-script";
+      let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+      const startParsing = async () => {
+        try {
+          onProgress("Ініціалізація локального оцифрувальника...");
+          const pdfjsLib = (window as any)["pdfjs-dist/build/pdf"];
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
+
+          const arrayBuffer = await file.arrayBuffer();
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+
+          loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
+            if (progressData.total > 0) {
+              const pct = Math.round((progressData.loaded / progressData.total) * 100);
+              onProgress(`Завантаження в пам'ять: ${pct}%`);
+            }
+          };
+
+          const pdf = await loadingTask.promise;
+          const totalPages = pdf.numPages;
+          const pages: { [key: number]: string } = {};
+
+          for (let i = 1; i <= totalPages; i++) {
+            onProgress(`Локальне оцифрування: сторінка ${i} з ${totalPages} (${Math.round((i / totalPages) * 100)}%)`);
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(" ")
+              .replace(/\s+/g, " ")
+              .trim();
+            pages[i] = pageText || " ";
+          }
+
+          resolve({
+            id: "book-" + Date.now(),
+            title: uploadTitle || file.name.replace(/\.[^/.]+$/, ""),
+            grade: uploadGrade,
+            subject: uploadSubject,
+            totalPages,
+            pages
+          });
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      if (!script) {
+        onProgress("Підключення локальних оцифрувальних бібліотек...");
+        script = document.createElement("script");
+        script.id = scriptId;
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js";
+        script.onload = () => {
+          setTimeout(startParsing, 150);
+        };
+        script.onerror = () => reject(new Error("Не вдалося завантажити локальний PDF-парсер."));
+        document.head.appendChild(script);
+      } else {
+        if ((window as any)["pdfjs-dist/build/pdf"]) {
+          startParsing();
+        } else {
+          script.addEventListener("load", startParsing);
+        }
+      }
+    });
+  };
+
+  // Perform Textbook File Upload/Parsing with client-side primary and server fallback
   const handleUploadTextbook = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setApiError("Будь ласка, виберіть файл PDF спочатку.");
+      setApiError("Будь ласка, виберіть файл PDF.");
       return;
     }
 
     setUploadingPdf(true);
     setApiError(null);
-
-    const formData = new FormData();
-    formData.append("pdf", selectedFile);
-    formData.append("title", uploadTitle || selectedFile.name.replace(/\.[^/.]+$/, ""));
-    formData.append("subject", uploadSubject);
-    formData.append("grade", uploadGrade);
+    setUploadProgress("Ініціалізація...");
 
     try {
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      let parsedBook: Textbook;
+      try {
+        parsedBook = await parsePdfClientSide(selectedFile, (progressMsg) => {
+          setUploadProgress(progressMsg);
+        });
+      } catch (clientErr: any) {
+        console.warn("Client-side PDF parsing failed, falling back to server:", clientErr);
+        setUploadProgress("Помилка локального оцифрування. Спроба обробки сервером...");
 
-      const data = await response.json();
-      if (response.ok && data.pages) {
-        const newBook: Textbook = {
+        const formData = new FormData();
+        formData.append("pdf", selectedFile);
+        formData.append("title", uploadTitle || selectedFile.name.replace(/\.[^/.]+$/, ""));
+        formData.append("subject", uploadSubject);
+        formData.append("grade", uploadGrade);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Не вдалося зчитати PDF ні локально, ні сервером.");
+        }
+
+        parsedBook = {
           id: "book-" + Date.now(),
           title: data.title,
           grade: data.grade,
@@ -200,26 +285,26 @@ export default function App() {
           totalPages: data.totalPages,
           pages: data.pages
         };
-
-        const updatedBooks = [...textbooks, newBook];
-        setTextbooks(updatedBooks);
-        
-        // Save uploaded books (only custom ones) list to local storage
-        const customBooks = updatedBooks.filter(b => !DEFAULT_TEXTBOOKS.some(db => db.id === b.id));
-        localStorage.setItem("ai_methodologist_books", JSON.stringify(customBooks));
-
-        setSelectedBookId(newBook.id);
-        setShowUploadForm(false);
-        setSelectedFile(null);
-        setUploadTitle("");
-      } else {
-        throw new Error(data.error || "Не вдалося витягти текст з PDF.");
       }
+
+      // Add newly parsed textbook to list
+      const updatedBooks = [...textbooks, parsedBook];
+      setTextbooks(updatedBooks);
+
+      // Save custom ones in local storage
+      const customBooks = updatedBooks.filter(b => !DEFAULT_TEXTBOOKS.some(db => db.id === b.id));
+      localStorage.setItem("ai_methodologist_books", JSON.stringify(customBooks));
+
+      setSelectedBookId(parsedBook.id);
+      setShowUploadForm(false);
+      setSelectedFile(null);
+      setUploadTitle("");
     } catch (error: any) {
-      console.error("Upload error:", error);
+      console.error("General parse error:", error);
       setApiError("Помилка завантаження підручника: " + (error.message || error));
     } finally {
       setUploadingPdf(false);
+      setUploadProgress("");
     }
   };
 
@@ -545,7 +630,7 @@ export default function App() {
                     <p className="text-[10px] text-slate-400 font-medium">
                       {selectedFile ? selectedFile.name : "Оберіть файл PDF"}
                     </p>
-                    <span className="text-[9px] text-slate-650 block">Макс. розмір 30МБ</span>
+                    <span className="text-[9px] text-slate-650 block">Макс. розмір 100МБ</span>
                   </div>
                 </div>
 
@@ -558,7 +643,7 @@ export default function App() {
                   {uploadingPdf ? (
                     <>
                       <Loader className="w-3.5 h-3.5 animate-spin" />
-                      <span>Зчитуємо сторінки PDF...</span>
+                      <span>{uploadProgress || "Зчитування сторінок..."}</span>
                     </>
                   ) : (
                     <>
