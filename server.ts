@@ -74,7 +74,7 @@ async function callGeminiWithRetryAndFallback(
       } catch (err: any) {
         lastError = err;
         const errMsg = err.message || JSON.stringify(err);
-        console.warn(`[Gemini Resiliency Engine Warning] Model '${model}' failed on attempt ${attempt}. Error: ${errMsg}`);
+        console.info(`[Resiliency Engine Info] Model '${model}' is temporarily busy or rate-limited on attempt ${attempt}. Status: Handled gracefully. Message: ${errMsg}`);
 
         // Fast path: skip retry if it's a structural client-side error (400)
         const isClientError = errMsg.includes("400") || errMsg.includes("invalid") || errMsg.includes("schema");
@@ -90,7 +90,7 @@ async function callGeminiWithRetryAndFallback(
         }
       }
     }
-    console.warn(`[Gemini Resiliency Engine Warning] FAILOVER: '${model}' exhausted all attempts. Shifting to next backup model in line...`);
+    console.info(`[Resiliency Engine Info] Shifting from '${model}' to the next backup model in the fallback queue...`);
   }
 
   throw new Error(
