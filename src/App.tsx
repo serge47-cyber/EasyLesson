@@ -105,6 +105,57 @@ export default function App() {
     }
   }, [selectedBookId]);
 
+  // Robust page navigation/input handlers
+  const handleStartPageChange = (valStr: string) => {
+    if (valStr === "") {
+      setStartPage(0);
+      return;
+    }
+    const val = parseInt(valStr, 10);
+    if (isNaN(val)) return;
+
+    const maxPages = activeBook ? activeBook.totalPages : 1;
+    const page = Math.max(1, Math.min(maxPages, val));
+    setStartPage(page);
+    
+    // Automatically shift end page if start page exceeds it
+    if (page > endPage && endPage !== 0) {
+      setEndPage(page);
+    }
+  };
+
+  const handleEndPageChange = (valStr: string) => {
+    if (valStr === "") {
+      setEndPage(0);
+      return;
+    }
+    const val = parseInt(valStr, 10);
+    if (isNaN(val)) return;
+
+    const maxPages = activeBook ? activeBook.totalPages : 1;
+    const page = Math.max(startPage, Math.min(maxPages, val));
+    setEndPage(page);
+  };
+
+  const handleStartPageBlur = () => {
+    if (startPage <= 0) {
+      setStartPage(1);
+    }
+    const maxPages = activeBook ? activeBook.totalPages : 1;
+    if (startPage > maxPages) {
+      setStartPage(maxPages);
+    }
+  };
+
+  const handleEndPageBlur = () => {
+    const maxPages = activeBook ? activeBook.totalPages : 1;
+    if (endPage < startPage || endPage <= 0) {
+      setEndPage(startPage);
+    } else if (endPage > maxPages) {
+      setEndPage(maxPages);
+    }
+  };
+
   // Handle PDF file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -176,13 +227,25 @@ export default function App() {
   const handleGenerateLesson = async () => {
     if (!activeBook) return;
 
+    // Enforce strict boundaries right before generating
+    let sPage = startPage;
+    let ePage = endPage;
+    const maxPages = activeBook.totalPages;
+    if (sPage <= 0) sPage = 1;
+    if (sPage > maxPages) sPage = maxPages;
+    if (ePage <= 0 || ePage < sPage) ePage = sPage;
+    if (ePage > maxPages) ePage = maxPages;
+
+    setStartPage(sPage);
+    setEndPage(ePage);
+
     setGeneratingLesson(true);
     setApiError(null);
     setGeneratedLesson(null);
 
     // Grab continuous page text within range
     const pageTextCollection: string[] = [];
-    for (let pNum = startPage; pNum <= endPage; pNum++) {
+    for (let pNum = sPage; pNum <= ePage; pNum++) {
       if (activeBook.pages[pNum]) {
         pageTextCollection.push(activeBook.pages[pNum]);
       }
@@ -203,8 +266,8 @@ export default function App() {
         body: JSON.stringify({
           subject: activeBook.subject,
           text: fullPageText,
-          startPage,
-          endPage,
+          startPage: sPage,
+          endPage: ePage,
           customModel
         })
       });
@@ -524,8 +587,9 @@ export default function App() {
                     type="number"
                     min="1"
                     max={activeBook ? activeBook.totalPages : 1}
-                    value={startPage}
-                    onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
+                    value={startPage === 0 ? "" : startPage}
+                    onChange={(e) => handleStartPageChange(e.target.value)}
+                    onBlur={handleStartPageBlur}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono font-bold focus:outline-none focus:border-sky-500"
                   />
                 </div>
@@ -537,8 +601,9 @@ export default function App() {
                     type="number"
                     min={startPage}
                     max={activeBook ? activeBook.totalPages : 1}
-                    value={endPage}
-                    onChange={(e) => setEndPage(Math.max(startPage, Math.min(activeBook.totalPages, parseInt(e.target.value) || startPage)))}
+                    value={endPage === 0 ? "" : endPage}
+                    onChange={(e) => handleEndPageChange(e.target.value)}
+                    onBlur={handleEndPageBlur}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono font-bold focus:outline-none focus:border-sky-500"
                   />
                 </div>
