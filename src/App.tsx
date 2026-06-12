@@ -460,6 +460,7 @@ export default function App() {
                   className="bg-transparent text-slate-100 focus:outline-none focus:ring-0 font-mono font-bold cursor-pointer"
                 >
                   <option value="gemini-3.5-flash" className="bg-slate-900">Gemini 3.5 Flash</option>
+                  <option value="gemini-3.1-flash-lite" className="bg-slate-900">Gemini 3.1 Flash Lite</option>
                 </select>
               </div>
             </div>
@@ -774,13 +775,19 @@ export default function App() {
                 <div className="bg-slate-905 border border-slate-800 p-5 md:p-6 rounded-2xl space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest bg-cyan-950/20 px-2 py-0.5 rounded-md border border-cyan-500/20">
                           {activeBook.subject}
                         </span>
                         <span className="text-xs font-bold text-slate-400 font-mono bg-slate-800 border border-slate-700/60 px-2 py-0.5 rounded-md">
                           Стор. {startPage} - {endPage}
                         </span>
+                        {generatedLesson.usedModel && (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-md flex items-center gap-1 font-sans animate-fade-in">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Модель: {generatedLesson.usedModel === "gemini-3.1-flash-lite" ? "Gemini 3.1 Flash Lite (Резерв через навантаження)" : "Gemini 3.5 Flash"}</span>
+                          </span>
+                        )}
                       </div>
                       <h2 className="text-xl md:text-2xl font-extrabold text-slate-100 uppercase tracking-tight leading-snug">
                         {generatedLesson.themeTitle}

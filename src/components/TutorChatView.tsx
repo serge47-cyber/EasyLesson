@@ -88,7 +88,8 @@ export default function TutorChatView({ pageText, subject, bookTitle }: TutorCha
           id: botMessageId,
           role: "model",
           text: data.text,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          usedModel: data.usedModel
         };
         setMessages((prev) => [...prev, botMsg]);
       } else {
@@ -163,8 +164,16 @@ export default function TutorChatView({ pageText, subject, bookTitle }: TutorCha
                 >
                   <p className="whitespace-pre-line">{msg.text}</p>
                 </div>
-                <span className={`text-[10px] text-slate-500 ${isModel ? "text-left" : "text-right"}`}>
-                  {msg.timestamp}
+                <span className={`text-[10px] text-slate-500 ${isModel ? "text-left" : "text-right"} flex items-center gap-1.5 flex-wrap ${isModel ? "justify-start" : "justify-end"}`}>
+                  <span>{msg.timestamp}</span>
+                  {isModel && msg.usedModel && (
+                    <>
+                      <span>•</span>
+                      <span className="text-[9px] text-[#10b981] font-mono bg-emerald-950/20 px-1 py-0.5 rounded border border-emerald-500/10">
+                        {msg.usedModel === "gemini-3.1-flash-lite" ? "Gemini 3.1 Lite (Резерв)" : "Gemini 3.5 Flash"}
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
 

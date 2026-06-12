@@ -28,6 +28,76 @@ function getAiClient(): GoogleGenAI {
   return aiClient;
 }
 
+/**
+ * Executes a Gemini prompt with built-in retries and automatic model failure fallback.
+ * Ideal for avoiding "503 High demand" errors during high API utilization.
+ */
+async function callGeminiWithRetryAndFallback(
+  ai: GoogleGenAI,
+  params: {
+    contents: any;
+    config?: any;
+  },
+  requestedModel: string
+): Promise<{ response: any; usedModel: string }> {
+  const modelsToTry = [requestedModel];
+  if (requestedModel === "gemini-3.5-flash") {
+    modelsToTry.push("gemini-3.1-flash-lite");
+  } else if (requestedModel === "gemini-3.1-flash-lite") {
+    modelsToTry.push("gemini-3.5-flash");
+  } else {
+    // Custom model fallback sequence
+    if (!modelsToTry.includes("gemini-3.5-flash")) {
+      modelsToTry.push("gemini-3.5-flash");
+    }
+    if (!modelsToTry.includes("gemini-3.1-flash-lite")) {
+      modelsToTry.push("gemini-3.1-flash-lite");
+    }
+  }
+
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    // Try each model up to 2 times (initial + 1 retry)
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[Gemini Resiliency Engine] Sending request to '${model}' (Attempt ${attempt}/${maxAttempts})...`);
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: params.contents,
+          config: params.config,
+        });
+
+        console.log(`[Gemini Resiliency Engine] Success! Resource answered successfully using '${model}'`);
+        return { response, usedModel: model };
+      } catch (err: any) {
+        lastError = err;
+        const errMsg = err.message || JSON.stringify(err);
+        console.warn(`[Gemini Resiliency Engine Warning] Model '${model}' failed on attempt ${attempt}. Error: ${errMsg}`);
+
+        // Fast path: skip retry if it's a structural client-side error (400)
+        const isClientError = errMsg.includes("400") || errMsg.includes("invalid") || errMsg.includes("schema");
+        if (isClientError && attempt === 1) {
+          console.log(`[Gemini Resiliency Engine] Skipping retries for '${model}' due to validation error.`);
+          break;
+        }
+
+        if (attempt < maxAttempts) {
+          const delay = attempt * 600;
+          console.log(`[Gemini Resiliency Engine] Waiting ${delay}ms before next attempt for ${model}...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+    console.warn(`[Gemini Resiliency Engine Warning] FAILOVER: '${model}' exhausted all attempts. Shifting to next backup model in line...`);
+  }
+
+  throw new Error(
+    `Сервіси ШІ зараз високоперевантажені. Усі спроби з підстраховочними моделями вичерпано. Останній код збою: ${lastError?.message || JSON.stringify(lastError)}`
+  );
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -131,85 +201,89 @@ ${text}
    Опиши 'problem' (умова), 'principles' (головні принципи/формули для вирішення в 1-2 реченнях), та 'steps' (масив кроків, де кожен крок має 'title', 'explanation' - хід думки, та 'result' - конкретний результат або висновок кроку).
 `;
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              themeTitle: { type: Type.STRING },
-              missionBriefing: { type: Type.STRING },
-              theses: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING },
-                    content: { type: Type.STRING },
-                    metaphor: { type: Type.STRING }
-                  },
-                  required: ["title", "content", "metaphor"]
-                }
-              },
-              flashcards: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    front: { type: Type.STRING },
-                    back: { type: Type.STRING }
-                  },
-                  required: ["front", "back"]
-                }
-              },
-              quiz: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING },
-                    options: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING }
+      const { response, usedModel } = await callGeminiWithRetryAndFallback(
+        ai,
+        {
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                themeTitle: { type: Type.STRING },
+                missionBriefing: { type: Type.STRING },
+                theses: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      content: { type: Type.STRING },
+                      metaphor: { type: Type.STRING }
                     },
-                    correctIndex: { type: Type.INTEGER },
-                    explanation: { type: Type.STRING }
-                  },
-                  required: ["question", "options", "correctIndex", "explanation"]
+                    required: ["title", "content", "metaphor"]
+                  }
+                },
+                flashcards: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      front: { type: Type.STRING },
+                      back: { type: Type.STRING }
+                    },
+                    required: ["front", "back"]
+                  }
+                },
+                quiz: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      question: { type: Type.STRING },
+                      options: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                      },
+                      correctIndex: { type: Type.INTEGER },
+                      explanation: { type: Type.STRING }
+                    },
+                    required: ["question", "options", "correctIndex", "explanation"]
+                  }
+                },
+                stepByStepProblems: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      problem: { type: Type.STRING },
+                      principles: { type: Type.STRING },
+                      steps: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          properties: {
+                            title: { type: Type.STRING },
+                            explanation: { type: Type.STRING },
+                            result: { type: Type.STRING }
+                          },
+                          required: ["title", "explanation", "result"]
+                        }
+                      }
+                    },
+                    required: ["problem", "principles", "steps"]
+                  }
                 }
               },
-              stepByStepProblems: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    problem: { type: Type.STRING },
-                    principles: { type: Type.STRING },
-                    steps: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.OBJECT,
-                        properties: {
-                          title: { type: Type.STRING },
-                          explanation: { type: Type.STRING },
-                          result: { type: Type.STRING }
-                        },
-                        required: ["title", "explanation", "result"]
-                      }
-                    }
-                  },
-                  required: ["problem", "principles", "steps"]
-                }
-              }
-            },
-            required: ["themeTitle", "missionBriefing", "theses", "flashcards", "quiz", "stepByStepProblems"]
+              required: ["themeTitle", "missionBriefing", "theses", "flashcards", "quiz", "stepByStepProblems"]
+            }
           }
-        }
-      });
+        },
+        modelName
+      );
 
       const parsedJson = JSON.parse(response.text || "{}");
+      parsedJson.usedModel = usedModel;
       res.json(parsedJson);
 
     } catch (error: any) {
@@ -264,16 +338,19 @@ ${pageText || "Текст сторінок підручника недоступ
         parts: [{ text: userMessage }]
       });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: contents,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.7,
-        }
-      });
+      const { response, usedModel } = await callGeminiWithRetryAndFallback(
+        ai,
+        {
+          contents: contents,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.7,
+          }
+        },
+        "gemini-3.5-flash"
+      );
 
-      res.json({ text: response.text });
+      res.json({ text: response.text, usedModel });
 
     } catch (error: any) {
       console.error("AI Tutor Chat error:", error);
