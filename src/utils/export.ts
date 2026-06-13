@@ -9,7 +9,8 @@ import {
   TableCell,
   HeadingLevel,
   AlignmentType,
-  WidthType
+  WidthType,
+  TableLayoutType
 } from "docx";
 
 /**
@@ -72,14 +73,16 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
   // Divider Table to look like a separator line
   children.push(
     new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [9000],
+      width: { size: 9000, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              children: [],
+              children: [new Paragraph({})],
               shading: { fill: "0ea5e9" },
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: 9000, type: WidthType.DXA },
             })
           ]
         })
@@ -91,7 +94,9 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
   // 2. MISSION BRIEFING BANNER
   children.push(
     new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [9000],
+      width: { size: 9000, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
           children: [
@@ -121,7 +126,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                 })
               ],
               shading: { fill: "ecfeff" },
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: 9000, type: WidthType.DXA },
             })
           ]
         })
@@ -171,7 +176,9 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
       }),
       // Metaphor card in shading
       new Table({
-       width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: [9000],
+        width: { size: 9000, type: WidthType.DXA },
+        layout: TableLayoutType.FIXED,
         rows: [
           new TableRow({
             children: [
@@ -196,7 +203,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ],
                 shading: { fill: "f0fdf4" },
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 9000, type: WidthType.DXA },
               })
             ]
           })
@@ -251,7 +258,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
             })
           ],
           shading: { fill: "f1f5f9" },
-          width: { size: 35, type: WidthType.PERCENTAGE },
+          width: { size: 3150, type: WidthType.DXA },
         }),
         new TableCell({
           children: [
@@ -267,7 +274,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
             })
           ],
           shading: { fill: "f1f5f9" },
-          width: { size: 65, type: WidthType.PERCENTAGE },
+          width: { size: 5850, type: WidthType.DXA },
         })
       ]
     }),
@@ -289,7 +296,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                 ]
               })
             ],
-            width: { size: 35, type: WidthType.PERCENTAGE },
+            width: { size: 3150, type: WidthType.DXA },
           }),
           new TableCell({
             children: [
@@ -304,7 +311,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                 ]
               })
             ],
-            width: { size: 65, type: WidthType.PERCENTAGE },
+            width: { size: 5850, type: WidthType.DXA },
           })
         ]
       });
@@ -313,7 +320,9 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
 
   children.push(
     new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [3150, 5850],
+      width: { size: 9000, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED,
       rows: cardRows,
     }),
     new Paragraph({ spacing: { before: 200 } })
@@ -379,7 +388,9 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
 
     children.push(
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: [9000],
+        width: { size: 9000, type: WidthType.DXA },
+        layout: TableLayoutType.FIXED,
         rows: [
           new TableRow({
             children: [
@@ -404,7 +415,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ],
                 shading: { fill: "f8fafc" },
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 9000, type: WidthType.DXA },
               })
             ]
           })
@@ -524,7 +535,9 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
   children.push(
     new Paragraph({ spacing: { before: 400 } }),
     new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [9000],
+      width: { size: 9000, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
           children: [
@@ -538,12 +551,12 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                       text: `Створено цифровим інструментом «ШІ-Методист» • ${new Date().getFullYear()} © Всі права захищено.`,
                       size: 18,
                       color: "94a3b8",
-                    })
+                     })
                   ]
                 })
               ],
               shading: { fill: "f8fafc" },
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: 9000, type: WidthType.DXA },
             })
           ]
         })
