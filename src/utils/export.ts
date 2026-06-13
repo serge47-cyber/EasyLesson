@@ -79,6 +79,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
             new TableCell({
               children: [],
               shading: { fill: "0ea5e9" },
+              width: { size: 100, type: WidthType.PERCENTAGE },
             })
           ]
         })
@@ -120,6 +121,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                 })
               ],
               shading: { fill: "ecfeff" },
+              width: { size: 100, type: WidthType.PERCENTAGE },
             })
           ]
         })
@@ -169,7 +171,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
       }),
       // Metaphor card in shading
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+       width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [
           new TableRow({
             children: [
@@ -194,6 +196,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ],
                 shading: { fill: "f0fdf4" },
+                width: { size: 100, type: WidthType.PERCENTAGE },
               })
             ]
           })
@@ -248,6 +251,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
             })
           ],
           shading: { fill: "f1f5f9" },
+          width: { size: 35, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
           children: [
@@ -263,6 +267,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
             })
           ],
           shading: { fill: "f1f5f9" },
+          width: { size: 65, type: WidthType.PERCENTAGE },
         })
       ]
     }),
@@ -283,7 +288,8 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ]
               })
-            ]
+            ],
+            width: { size: 35, type: WidthType.PERCENTAGE },
           }),
           new TableCell({
             children: [
@@ -297,7 +303,8 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ]
               })
-            ]
+            ],
+            width: { size: 65, type: WidthType.PERCENTAGE },
           })
         ]
       });
@@ -397,6 +404,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                   })
                 ],
                 shading: { fill: "f8fafc" },
+                width: { size: 100, type: WidthType.PERCENTAGE },
               })
             ]
           })
@@ -535,6 +543,7 @@ export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
                 })
               ],
               shading: { fill: "f8fafc" },
+              width: { size: 100, type: WidthType.PERCENTAGE },
             })
           ]
         })
