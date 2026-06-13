@@ -170,15 +170,7 @@ export default function App() {
     }
     const val = parseInt(valStr, 10);
     if (isNaN(val)) return;
-
-    const maxPages = activeBook ? activeBook.totalPages : 1;
-    const page = Math.max(1, Math.min(maxPages, val));
-    setStartPage(page);
-    
-    // Automatically shift end page if start page exceeds it
-    if (page > endPage && endPage !== 0) {
-      setEndPage(page);
-    }
+    setStartPage(val);
   };
 
   const handleEndPageChange = (valStr: string) => {
@@ -188,29 +180,34 @@ export default function App() {
     }
     const val = parseInt(valStr, 10);
     if (isNaN(val)) return;
-
-    const maxPages = activeBook ? activeBook.totalPages : 1;
-    const page = Math.max(startPage, Math.min(maxPages, val));
-    setEndPage(page);
+    setEndPage(val);
   };
 
   const handleStartPageBlur = () => {
-    if (startPage <= 0) {
-      setStartPage(1);
-    }
     const maxPages = activeBook ? activeBook.totalPages : 1;
-    if (startPage > maxPages) {
-      setStartPage(maxPages);
+    let page = startPage;
+    if (page <= 0) {
+      page = 1;
+    } else if (page > maxPages) {
+      page = maxPages;
+    }
+    setStartPage(page);
+    
+    // Automatically shift end page if start page exceeds it
+    if (endPage < page && endPage !== 0) {
+      setEndPage(page);
     }
   };
 
   const handleEndPageBlur = () => {
     const maxPages = activeBook ? activeBook.totalPages : 1;
-    if (endPage < startPage || endPage <= 0) {
-      setEndPage(startPage);
-    } else if (endPage > maxPages) {
-      setEndPage(maxPages);
+    let page = endPage;
+    if (page <= 0 || page < startPage) {
+      page = Math.max(1, startPage);
+    } else if (page > maxPages) {
+      page = maxPages;
     }
+    setEndPage(page);
   };
 
   // Handle PDF file selection
@@ -609,7 +606,7 @@ export default function App() {
                             <div className={`p-2 rounded-lg ${isSelected ? "bg-sky-500/20 text-sky-300" : "bg-slate-800 text-slate-400"} flex-shrink-0`}>
                               <BookOpen className="w-4 h-4" />
                             </div>
-                            <div className="min-w-0 flex-1 space-y-1 pr-6">
+                            <div className="min-w-0 flex-1 space-y-1 pr-9">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-[10px] font-bold font-mono text-slate-500 bg-slate-850 border border-slate-800 px-1.5 py-0.1 rounded-md">
                                   Клас {book.grade}
@@ -628,10 +625,10 @@ export default function App() {
                             <button
                               id={`delete-book-btn-${book.id}`}
                               onClick={(e) => handleDeleteBook(book.id, e)}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 rounded-md transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-450 hover:bg-slate-800 rounded-lg transition-all opacity-85 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 cursor-pointer z-10 touch-manipulation"
                               title={isDefaultBook ? "Приховати цей демо-підручник" : "Видалити завантажений підручник"}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4 text-slate-400 hover:text-rose-450" />
                             </button>
                           </div>
                         );
