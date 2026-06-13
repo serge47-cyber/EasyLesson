@@ -1000,7 +1000,7 @@ export default function App() {
               <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2 leading-relaxed">
                 <Info className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
                 <p>
-                  Порада ШІ: оптимальний обсяг для генерації одного уроку — <span className="font-bold text-white">1–3 сторінки</span>. Це забезпечує максимальну якість методичних тез та безпомилковість квізів.
+                  Порада ШІ: оптимальний обсяг для генерації одного уроку — <span className="font-bold text-slate-100">1–3 сторінки</span>. Це забезпечує максимальну якість методичних тез та безпомилковість квізів.
                 </p>
               </div>
 
@@ -1071,7 +1071,7 @@ export default function App() {
                   <BrainCircuit className="w-10 h-10 text-sky-400 absolute inset-0 m-auto animate-pulse" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-white">Методичний ШІ-дизайнер компонує урок</h3>
+                  <h3 className="text-xl font-bold text-slate-100">Методичний ШІ-дизайнер компонує урок</h3>
                   <div className="max-w-md text-slate-400 text-sm leading-relaxed space-y-1 font-mono">
                     <p className="animate-pulse">⚡ Зчитування сторінок [{startPage} - {endPage}] підручника {activeBook.title}...</p>
                     <p className="text-slate-500">✍️ Переклад у тези у стилі "{styleBadge.label.split(' ')[1]}"...</p>
