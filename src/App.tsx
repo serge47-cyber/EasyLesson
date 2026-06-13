@@ -625,10 +625,10 @@ export default function App() {
                             <button
                               id={`delete-book-btn-${book.id}`}
                               onClick={(e) => handleDeleteBook(book.id, e)}
-                              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-450 hover:bg-slate-800 rounded-lg transition-all opacity-85 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 cursor-pointer z-10 touch-manipulation"
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all opacity-60 hover:opacity-100 focus:opacity-100 cursor-pointer z-10 touch-manipulation"
                               title={isDefaultBook ? "Приховати цей демо-підручник" : "Видалити завантажений підручник"}
                             >
-                              <Trash2 className="w-4 h-4 text-slate-400 hover:text-rose-450" />
+                              <Trash2 className="w-4 h-4 text-slate-400 hover:text-rose-400" />
                             </button>
                           </div>
                         );
