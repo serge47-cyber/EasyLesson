@@ -1125,7 +1125,7 @@ export default function App() {
                         id="export-word-btn"
                         onClick={() => exportToWord(generatedLesson, activeBook)}
                         className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm rounded-xl"
-                        title="Завантажити у форматі Microsoft Word (.doc)"
+                        title="Завантажити у форматі Microsoft Word (.docx)"
                       >
                         📄 Експорт Word
                       </button>

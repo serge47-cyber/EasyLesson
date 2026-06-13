@@ -1,254 +1,573 @@
 import { GeneratedLesson, Textbook } from "../types";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  HeadingLevel,
+  AlignmentType,
+  WidthType
+} from "docx";
 
 /**
- * Strips HTML tags or parses back ticks/bold styling to cleaner text for document output
+ * Clean strings of weird characters and trim spaces
  */
 const cleanText = (text: string): string => {
   if (!text) return "";
-  return text
-    .replace(/\s+/g, " ")
-    .trim();
+  return text.trim();
 };
 
 /**
- * Builds a highly polished Microsoft Word compatible HTML bundle.
- * Word parses this format perfectly and natively displays tables, borders, colors and spacing.
+ * Builds a highly polished *.docx binary container matching OpenXML specification.
+ * This files are 100% natively supported by Apple Pages, Microsoft Word, Google Docs, etc.
  */
 export function exportToWord(lesson: GeneratedLesson, book: Textbook) {
-  const filename = `AI_Methodologist_${lesson.themeTitle.replace(/[^a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s-_]/g, "").substring(0, 40)}.doc`;
-  
-  let thesesHtml = "";
+  const filename = `AI_Methodologist_${lesson.themeTitle.replace(/[^a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s-_]/g, "").substring(0, 40)}.docx`;
+
+  const children: any[] = [];
+
+  // 1. HEADER LOGO & TITLE
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 100 },
+      children: [
+        new TextRun({
+          text: "ОСВІТНІЙ КОНСПЕКТ ШІ-МЕТОДИСТА",
+          bold: true,
+          size: 18, // 9pt
+          color: "0ea5e9",
+        })
+      ]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 150 },
+      children: [
+        new TextRun({
+          text: lesson.themeTitle,
+          bold: true,
+          size: 40, // 20pt
+          color: "0f172a",
+        })
+      ]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 },
+      children: [
+        new TextRun({
+          text: `Адаптивний матеріал за підручником «${book.title}» (${book.subject}, ${book.grade} клас)`,
+          italics: true,
+          size: 22, // 11pt
+          color: "475569",
+        })
+      ]
+    })
+  );
+
+  // Divider Table to look like a separator line
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [],
+              shading: { fill: "0ea5e9" },
+            })
+          ]
+        })
+      ]
+    }),
+    new Paragraph({ spacing: { before: 200 } })
+  );
+
+  // 2. MISSION BRIEFING BANNER
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  spacing: { before: 120, after: 60 },
+                  children: [
+                    new TextRun({
+                      text: "🎮 ВСТУПНИЙ КВЕСТ-ОБЗОР (MISSION BRIEFING)",
+                      bold: true,
+                      size: 22, // 11pt
+                      color: "0891b2",
+                    })
+                  ]
+                }),
+                new Paragraph({
+                  spacing: { before: 60, after: 120 },
+                  children: [
+                    new TextRun({
+                      text: `«${lesson.missionBriefing}»`,
+                      italics: true,
+                      size: 24, // 12pt
+                      color: "0e7490",
+                    })
+                  ]
+                })
+              ],
+              shading: { fill: "ecfeff" },
+            })
+          ]
+        })
+      ]
+    }),
+    new Paragraph({ spacing: { before: 300, after: 100 } })
+  );
+
+  // 3. SECTION I: THEORETICAL THESES
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 200, after: 100 },
+      children: [
+        new TextRun({
+          text: "📌 Розділ I. Опорні тези та асоціативні метафори",
+          bold: true,
+          size: 30, // 15pt
+          color: "0f172a",
+        })
+      ]
+    })
+  );
+
   lesson.theses.forEach((thesis, idx) => {
-    thesesHtml += `
-      <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; background-color: #ffffff; border-radius: 8px;">
-        <h3 style="color: #0369a1; font-size: 15px; margin: 0 0 8px 0; font-family: sans-serif;">
-          Теза #${idx + 1}: ${thesis.title}
-        </h3>
-        <p style="font-size: 13.5px; color: #334155; line-height: 1.6; font-family: sans-serif; margin: 0;">
-          ${thesis.content}
-        </p>
-        <div style="margin-top: 12px; padding: 12px; background-color: #f0fdf4; border-left: 3.5px solid #10b981; border-radius: 4px;">
-          <p style="font-size: 13px; color: #15803d; font-style: italic; font-family: sans-serif; margin: 0;">
-            <strong>💡 Асоціативна метафора:</strong> ${thesis.metaphor}
-          </p>
-        </div>
-      </div>
-    `;
+    children.push(
+      new Paragraph({
+        spacing: { before: 150, after: 60 },
+        children: [
+          new TextRun({
+            text: `Теза ${idx + 1}: ${thesis.title}`,
+            bold: true,
+            size: 26, // 13pt
+            color: "0284c7",
+          })
+        ]
+      }),
+      new Paragraph({
+        spacing: { after: 100 },
+        children: [
+          new TextRun({
+            text: thesis.content,
+            size: 24, // 12pt
+            color: "334155",
+          })
+        ]
+      }),
+      // Metaphor card in shading
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    spacing: { before: 100, after: 100 },
+                    children: [
+                      new TextRun({
+                        text: "💡 Асоціативна метафора: ",
+                        bold: true,
+                        size: 22,
+                        color: "15803d",
+                      }),
+                      new TextRun({
+                        text: thesis.metaphor,
+                        italics: true,
+                        size: 22,
+                        color: "166534",
+                      })
+                    ]
+                  })
+                ],
+                shading: { fill: "f0fdf4" },
+              })
+            ]
+          })
+        ]
+      }),
+      new Paragraph({ spacing: { after: 150 } })
+    );
   });
 
-  let cardsHtml = `
-    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: sans-serif;">
-      <thead>
-        <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
-          <th style="border: 1px solid #cbd5e1; padding: 10px; font-size: 13px; text-align: left; font-weight: bold; width: 45%;">Термін / Питання (Лицьова сторона)</th>
-          <th style="border: 1px solid #cbd5e1; padding: 10px; font-size: 13px; text-align: left; font-weight: bold; width: 55%;">Пояснення / Відповідь (Зворотна сторона)</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-  lesson.flashcards.forEach((card) => {
-    cardsHtml += `
-      <tr>
-        <td style="border: 1px solid #cbd5e1; padding: 10px; font-size: 12.5px; color: #0f172a; font-weight: bold; vertical-align: top;">${card.front}</td>
-        <td style="border: 1px solid #cbd5e1; padding: 10px; font-size: 12.5px; color: #334155; vertical-align: top;">${card.back}</td>
-      </tr>
-    `;
-  });
-  cardsHtml += `</tbody></table>`;
+  // 4. SECTION II: FLASHCARDS TABLE
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 400, after: 100 },
+      children: [
+        new TextRun({
+          text: "🗂️ Розділ II. Картки визначень та понять (Flashcards)",
+          bold: true,
+          size: 30, // 15pt
+          color: "0f172a",
+        })
+      ]
+    }),
+    new Paragraph({
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: "Словник термінів для швидкого повторення та опитування:",
+          italics: true,
+          size: 22,
+          color: "475569",
+        })
+      ]
+    })
+  );
 
-  let quizHtml = "";
+  const cardRows = [
+    // Header Row
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Термін (Лицьова сторона)",
+                  bold: true,
+                  size: 22,
+                  color: "1e293b",
+                })
+              ]
+            })
+          ],
+          shading: { fill: "f1f5f9" },
+        }),
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Пояснення (Зворотна сторона)",
+                  bold: true,
+                  size: 22,
+                  color: "1e293b",
+                })
+              ]
+            })
+          ],
+          shading: { fill: "f1f5f9" },
+        })
+      ]
+    }),
+    // Data Rows
+    ...lesson.flashcards.map((c) => {
+      return new TableRow({
+        children: [
+          new TableCell({
+            children: [
+              new Paragraph({
+                spacing: { before: 80, after: 80 },
+                children: [
+                  new TextRun({
+                    text: c.front,
+                    bold: true,
+                    size: 22,
+                    color: "0f172a",
+                  })
+                ]
+              })
+            ]
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                spacing: { before: 80, after: 80 },
+                children: [
+                  new TextRun({
+                    text: c.back,
+                    size: 22,
+                    color: "334155",
+                  })
+                ]
+              })
+            ]
+          })
+        ]
+      });
+    })
+  ];
+
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: cardRows,
+    }),
+    new Paragraph({ spacing: { before: 200 } })
+  );
+
+  // 5. SECTION III: INTERACTIVE QUIZ
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 400, after: 100 },
+      children: [
+        new TextRun({
+          text: "📝 Розділ III. Експрес-тест оцінки знань (Quiz)",
+          bold: true,
+          size: 30, // 15pt
+          color: "0f172a",
+        })
+      ]
+    })
+  );
+
   lesson.quiz.forEach((q, idx) => {
-    let optionsHtml = "";
+    children.push(
+      new Paragraph({
+        spacing: { before: 200, after: 80 },
+        children: [
+          new TextRun({
+            text: `Запитання ${idx + 1}: ${q.question}`,
+            bold: true,
+            size: 24,
+            color: "1e293b",
+          })
+        ]
+      })
+    );
+
     q.options.forEach((opt, oIdx) => {
-      const char = String.fromCharCode(65 + oIdx); // A, B, C, D
+      const char = String.fromCharCode(65 + oIdx);
       const isCorrect = oIdx === q.correctIndex;
-      optionsHtml += `
-        <li style="margin-bottom: 5px; font-size: 13px; font-family: sans-serif; color: ${isCorrect ? "#166534" : "#475569"};">
-          <strong>${char}.</strong> ${opt} ${isCorrect ? "<em>(Правильна відповідь)</em>" : ""}
-        </li>
-      `;
+      children.push(
+        new Paragraph({
+          indent: { left: 360 },
+          spacing: { after: 40 },
+          children: [
+            new TextRun({
+              text: `${char}. ${opt}`,
+              size: 22,
+              color: isCorrect ? "166534" : "475569",
+              bold: isCorrect,
+            }),
+            isCorrect
+              ? new TextRun({
+                  text: " ✔ (Правильно)",
+                  bold: true,
+                  size: 20,
+                  color: "15803d",
+                })
+              : null
+          ].filter(Boolean) as TextRun[]
+        })
+      );
     });
 
-    quizHtml += `
-      <div style="margin-bottom: 25px; padding-left: 15px; border-left: 3px solid #64748b;">
-        <h4 style="font-size: 14px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0; font-family: sans-serif;">
-          Запитання #${idx + 1}: ${q.question}
-        </h4>
-        <ul style="list-style-type: none; padding-left: 0; margin-bottom: 10px;">
-          ${optionsHtml}
-        </ul>
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; font-size: 12px; color: #475569; border-radius: 4px; font-family: sans-serif; margin-top: 8px;">
-          <strong>Пояснення:</strong> ${q.explanation}
-        </div>
-      </div>
-    `;
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    spacing: { before: 80, after: 80 },
+                    children: [
+                      new TextRun({
+                        text: "Обґрунтування відповіді: ",
+                        bold: true,
+                        size: 20,
+                        color: "475569",
+                      }),
+                      new TextRun({
+                        text: q.explanation,
+                        italics: true,
+                        size: 20,
+                        color: "475569",
+                      })
+                    ]
+                  })
+                ],
+                shading: { fill: "f8fafc" },
+              })
+            ]
+          })
+        ]
+      }),
+      new Paragraph({ spacing: { after: 150 } })
+    );
   });
 
-  let solutionHtml = "";
+  // 6. SECTION IV: STEP SOLVER
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 400, after: 100 },
+      children: [
+        new TextRun({
+          text: "➗ Розділ IV. Кроковий практичний тренінг (Step Solver)",
+          bold: true,
+          size: 30, // 15pt
+          color: "0f172a",
+        })
+      ]
+    })
+  );
+
   if (lesson.stepByStepProblems && lesson.stepByStepProblems.length > 0) {
     lesson.stepByStepProblems.forEach((prob, idx) => {
-      let stepsMarkup = "";
-      prob.steps.forEach((step, sIdx) => {
-        stepsMarkup += `
-          <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-left: 3px solid #38bdf8; border-radius: 4px;">
-            <p style="font-size: 13px; font-weight: bold; color: #0284c7; margin: 0 0 6px 0; font-family: sans-serif;">
-              Крок ${sIdx + 1}: ${step.title}
-            </p>
-            <p style="font-size: 12.5px; color: #475569; margin: 0 0 6px 0; font-family: sans-serif; line-height: 1.5;">
-              ${step.explanation}
-            </p>
-            <p style="font-size: 12.5px; font-family: monospace; background-color: #f1f5f9; padding: 4px 8px; border-radius: 3px; color: #0369a1; display: inline-block; margin: 0;">
-              <strong>Результат кроку:</strong> ${step.result}
-            </p>
-          </div>
-        `;
-      });
+      children.push(
+        new Paragraph({
+          spacing: { before: 200, after: 60 },
+          children: [
+            new TextRun({
+              text: `Задача ${idx + 1}: ${prob.problem}`,
+              bold: true,
+              size: 26,
+              color: "0f172a",
+            })
+          ]
+        }),
+        new Paragraph({
+          spacing: { after: 150 },
+          children: [
+            new TextRun({
+              text: `👉 Базові принципи: ${prob.principles}`,
+              bold: true,
+              italics: true,
+              size: 22,
+              color: "0369a1",
+            })
+          ]
+        })
+      );
 
-      solutionHtml += `
-        <div style="margin-bottom: 30px; border: 1px solid #e2e8f0; padding: 18px; background-color: #ffffff; border-radius: 8px;">
-          <h4 style="font-size: 15px; font-weight: bold; color: #0f172a; margin: 0 0 8px 0; font-family: sans-serif;">
-            Задача #${idx + 1}: ${prob.problem}
-          </h4>
-          <p style="font-size: 13.0px; color: #475569; font-style: italic; margin-bottom: 12px; font-family: sans-serif;">
-            <strong>Базові принципи:</strong> ${prob.principles}
-          </p>
-          <div style="space-y-4">
-            ${stepsMarkup}
-          </div>
-        </div>
-      `;
+      prob.steps.forEach((step, sIdx) => {
+        children.push(
+          new Paragraph({
+            indent: { left: 200 },
+            spacing: { before: 100, after: 60 },
+            children: [
+              new TextRun({
+                text: `Крок ${sIdx + 1}: ${step.title}`,
+                bold: true,
+                size: 22,
+                color: "0284c7",
+              })
+            ]
+          }),
+          new Paragraph({
+            indent: { left: 200 },
+            spacing: { after: 60 },
+            children: [
+              new TextRun({
+                text: step.explanation,
+                size: 22,
+                color: "475569",
+              })
+            ]
+          }),
+          new Paragraph({
+            indent: { left: 200 },
+            spacing: { after: 150 },
+            children: [
+              new TextRun({
+                text: `↳ Результат кроку: `,
+                bold: true,
+                size: 20,
+                color: "0369a1",
+              }),
+              new TextRun({
+                text: step.result,
+                bold: true,
+                size: 20,
+                color: "0369a1",
+              })
+            ]
+          })
+        );
+      });
     });
   } else {
-    solutionHtml = "<p style='font-size: 13px; color: #64748b; font-style: italic;'>Пов'язані завдання відсутні у цьому розділі.</p>";
+    children.push(
+      new Paragraph({
+        spacing: { after: 200 },
+        children: [
+          new TextRun({
+            text: "Практичні аналітичні завдання відсутні у цій темі.",
+            italics: true,
+            size: 22,
+            color: "64748b",
+          })
+        ]
+      })
+    );
   }
 
-  const docContent = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head>
-      <title>${lesson.themeTitle}</title>
-      <!--[if gte mso 9]>
-      <xml>
-        <w:WordDocument>
-          <w:View>Print</w:View>
-          <w:Zoom>100</w:Zoom>
-          <w:DoNotOptimizeForBrowser/>
-        </w:WordDocument>
-      </xml>
-      <![endif]-->
-      <meta charset="utf-8">
-    </head>
-    <body style="font-family: Arial, sans-serif; margin: 40px; padding: 0; color: #1e293b; background-color: #ffffff; line-height: 1.6;">
-      
-      <!-- HEADER BLOCK -->
-      <div style="text-align: center; border-bottom: 3px solid #06b6d4; padding-bottom: 15px; margin-bottom: 30px;">
-        <span style="font-size: 11px; font-weight: bold; color: #06b6d4; text-transform: uppercase; letter-spacing: 2px; font-family: Arial, sans-serif;">
-          Класний Інтерактивний Матеріал ШІ
-        </span>
-        <h1 style="font-size: 26px; color: #0f172a; margin: 10px 0 5px 0; font-family: sans-serif; font-weight: 800;">
-          ${lesson.themeTitle}
-        </h1>
-        <p style="font-size: 13px; color: #64748b; margin: 0; font-family: sans-serif;">
-          Створено АІ-Методистом на базі підручника &laquo;<strong>${book.title}</strong>&raquo; (&nbsp;${book.subject}&nbsp;) • Клас ${book.grade}
-        </p>
-      </div>
+  // Footer metadata
+  children.push(
+    new Paragraph({ spacing: { before: 400 } }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 100, after: 100 },
+                  children: [
+                    new TextRun({
+                      text: `Створено цифровим інструментом «ШІ-Методист» • ${new Date().getFullYear()} © Всі права захищено.`,
+                      size: 18,
+                      color: "94a3b8",
+                    })
+                  ]
+                })
+              ],
+              shading: { fill: "f8fafc" },
+            })
+          ]
+        })
+      ]
+    })
+  );
 
-      <!-- COLD COMPACT DETAIL INFORMATION -->
-      <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 30px; font-family: sans-serif;">
-        <table style="width: 100%; border: none;">
-          <tr>
-            <td style="width: 50%; font-size: 12.5px; color: #475569; padding: 3px 0;"><strong>Навчальна дисципліна:</strong> ${book.subject}</td>
-            <td style="width: 50%; font-size: 12.5px; color: #475569; padding: 3px 0; text-align: right;"><strong>Орієнтовний клас:</strong> ${book.grade} клас</td>
-          </tr>
-          <tr>
-            <td style="width: 50%; font-size: 12.5px; color: #475569; padding: 3px 0;"><strong>Джерело:</strong> параграф/розділ підручника</td>
-            <td style="width: 50%; font-size: 12.5px; color: #475569; padding: 3px 0; text-align: right;"><strong>Дата створення:</strong> ${new Date().toLocaleDateString("uk-UA")}</td>
-          </tr>
-        </table>
-      </div>
+  // Construct Document
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: children,
+      }
+    ]
+  });
 
-      <!-- MISSION BRIEFING -->
-      <div style="background-color: #ecfeff; border-left: 4px solid #06b6d4; padding: 18px; margin-bottom: 33px; border-radius: 4px;">
-        <h2 style="font-size: 16px; font-weight: bold; color: #0891b2; margin: 0 0 8px 0; font-family: sans-serif; text-transform: uppercase; letter-spacing: 1px;">
-          🎮 Вступний Виклик-Місія для Учнів (Mission Briefing)
-        </h2>
-        <p style="font-size: 14px; font-style: italic; color: #0e7490; margin: 0; font-family: sans-serif; line-height: 1.6;">
-          &ldquo;${lesson.missionBriefing}&rdquo;
-        </p>
-      </div>
-
-      <!-- PART 1: THESES -->
-      <div style="margin-bottom: 40px;">
-        <h2 style="font-size: 19px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 18px; font-family: sans-serif; font-weight: 700;">
-          📌 Розділ I. Опорні тези та асоціативні метафори
-        </h2>
-        <p style="font-size: 13px; color: #64748b; font-style: italic; margin-bottom: 15px; font-family: sans-serif;">
-          Ключові теоретичні конспекти уроку, забезпечені яскравими життєвими паралелями для миттєвого розуміння учнями:
-        </p>
-        ${thesesHtml}
-      </div>
-
-      <!-- PART 2: FLASHCARDS -->
-      <div style="margin-bottom: 40px; page-break-before: always;">
-        <h2 style="font-size: 19px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 18px; font-family: sans-serif; font-weight: 700;">
-          🗂️ Розділ II. Картки термінів та понять (Flashcards)
-        </h2>
-        <p style="font-size: 13px; color: #64748b; font-style: italic; margin-bottom: 15px; font-family: sans-serif;">
-          Рекомендовані картки для інтерактивного закріплення, експрес-опитування або групової роботи:
-        </p>
-        ${cardsHtml}
-      </div>
-
-      <!-- PART 3: QUIZ -->
-      <div style="margin-bottom: 40px; page-break-before: always;">
-        <h2 style="font-size: 19px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 18px; font-family: sans-serif; font-weight: 700;">
-          📝 Розділ III. Експрес-тест оцінки знань (Interactive Quiz)
-        </h2>
-        <p style="font-size: 13px; color: #64748b; font-style: italic; margin-bottom: 15px; font-family: sans-serif;">
-          Завдання закритого типу для здійснення миттєвого зрізу знань на уроці:
-        </p>
-        ${quizHtml}
-      </div>
-
-      <!-- PART 4: STEP-BY-STEP -->
-      <div style="margin-bottom: 30px; page-break-before: always;">
-        <h2 style="font-size: 19px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 18px; font-family: sans-serif; font-weight: 700;">
-          ➗ Розділ IV. Кроковий практичний тренінг (Step Solver)
-        </h2>
-        <p style="font-size: 13px; color: #64748b; font-style: italic; margin-bottom: 15px; font-family: sans-serif;">
-          Адаптивне аналітичне розв'язання практичних викликів чи задач на підставі базових принципів теми:
-        </p>
-        ${solutionHtml}
-      </div>
-
-      <!-- FOOTER -->
-      <div style="text-align: center; border-top: 1.5px solid #cbd5e1; padding-top: 15px; margin-top: 50px; font-family: sans-serif;">
-        <p style="font-size: 11px; color: #94a3b8; margin: 0;">
-          Розроблено за допомогою цифрового інструменту «ШІ-Методист» на хмарній платформі Render.
-        </p>
-        <p style="font-size: 10px; color: #b4befe; margin: 4px 0 0 0;">
-          &copy; ${new Date().getFullYear()} Усі навчальні матеріали генеровані динамічно в освітніх цілях.
-        </p>
-      </div>
-
-    </body>
-    </html>
-  `;
-
-  // Standard Blob trick for browser downloads
-  const blob = new Blob(["\ufeff", docContent], { type: "application/msword;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  
-  // Cleanup
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 150);
+  // Pack and Download
+  Packer.toBlob(doc).then((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+  }).catch((err) => {
+    console.error("Помилка генерації .docx файлу:", err);
+  });
 }
 
 /**
@@ -552,6 +871,7 @@ export function exportToPrintPDF(lesson: GeneratedLesson, book: Textbook) {
           font-size: 12.5px;
           color: #334155;
           margin-bottom: 6px;
+          line-height: 1.5;
         }
 
         .step-result {
