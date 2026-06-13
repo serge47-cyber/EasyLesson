@@ -81,6 +81,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"theses" | "cards" | "quiz" | "solver" | "chat">("theses");
   const [apiError, setApiError] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState("gemini-3.5-flash");
+  const [expertStyle, setExpertStyle] = useState<string>("auto");
 
   // Local storage for hidden default books
   const [hiddenBookIds, setHiddenBookIds] = useState<string[]>([]);
@@ -406,7 +407,8 @@ export default function App() {
           text: fullPageText,
           startPage: sPage,
           endPage: ePage,
-          customModel
+          customModel,
+          expertStyle
         })
       });
 
@@ -430,14 +432,31 @@ export default function App() {
   const isScience = /фізик|хім|астрон|біол|геогр|наук/.test(activeBook?.subject.toLowerCase());
   const isLiterature = /літер|мов|психол|мист|муз/.test(activeBook?.subject.toLowerCase());
 
-  const getSubjectStyleBadge = () => {
-    if (isHistory) return { label: "🕯️ Політичний / історичний трилер", text: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
-    if (isScience) return { label: "🔬 Науковий детектив та інженерний хак", text: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
-    if (isLiterature) return { label: "🎭 Психопрофайлінг та мотиви характерів", text: "text-purple-400 bg-purple-500/10 border-purple-500/20" };
-    return { label: "🧩 Інтелектуальний квест та системні закономірності", text: "text-sky-400 bg-sky-500/10 border-sky-500/20" };
+  const getSubjectStyleBadge = (styleChoice: string) => {
+    let resolved = styleChoice;
+    if (resolved === "auto") {
+      if (isHistory) resolved = "thriller";
+      else if (isScience) resolved = "detective";
+      else if (isLiterature) resolved = "profiling";
+      else resolved = "quest";
+    }
+
+    if (resolved === "thriller") {
+      return { label: "🕯️ Політичний / історичний трилер", text: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+    }
+    if (resolved === "detective") {
+      return { label: "🔬 Науковий детектив та інженерія", text: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
+    }
+    if (resolved === "profiling") {
+      return { label: "🎭 Психопрофайлінг та мотиви характерів", text: "text-purple-400 bg-purple-500/10 border-purple-500/20" };
+    }
+    if (resolved === "immersive") {
+      return { label: "🗣️ Лінгвістичний коучинг та розмова", text: "text-rose-400 bg-rose-500/10 border-rose-500/20" };
+    }
+    return { label: "🧩 Інтелектуальний квест та логіка", text: "text-sky-400 bg-sky-500/10 border-sky-500/20" };
   };
 
-  const styleBadge = getSubjectStyleBadge();
+  const styleBadge = getSubjectStyleBadge(expertStyle);
 
   return (
     <div className="min-h-screen bg-slate-910 text-slate-100 flex md:flex-row flex-col font-sans overflow-x-hidden">
@@ -801,12 +820,29 @@ export default function App() {
                 </p>
               </div>
 
-              {/* AI Expert styling style display */}
-              <div className="space-y-1 pt-1.5">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Стилізація ШІ-Експерта</span>
-                <span className={`px-3 py-2 rounded-xl text-xs font-semibold block border text-center ${styleBadge.text}`}>
-                  {styleBadge.label}
-                </span>
+              {/* AI Expert styling style selection drop-down */}
+              <div className="space-y-1.5 pt-1.5">
+                <label className="text-[10px] uppercase font-bold text-slate-500 block">Оберіть Стиль Викладання</label>
+                <div className="relative">
+                  <select
+                    id="select-expert-style"
+                    value={expertStyle}
+                    onChange={(e) => setExpertStyle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 cursor-pointer text-left"
+                  >
+                    <option value="auto">🤖 Автовизначення (залежно від предмету)</option>
+                    <option value="thriller">🕯️ Політичний / історичний трилер</option>
+                    <option value="detective">🔬 Науковий детектив та інженерія</option>
+                    <option value="profiling">🎭 Психопрофайлінг та мотиви характерів</option>
+                    <option value="immersive">🗣️ Лінгвістичний коучинг та розмова</option>
+                    <option value="quest">🧩 Інтелектуальний квест та логіка</option>
+                  </select>
+                </div>
+                <div className="pt-1 select-none">
+                  <span className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold block border text-center transition-all ${styleBadge.text}`}>
+                    Поточна стилізація: {styleBadge.label}
+                  </span>
+                </div>
               </div>
 
               {/* Main execution button */}

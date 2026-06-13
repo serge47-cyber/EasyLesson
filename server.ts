@@ -168,7 +168,7 @@ async function startServer() {
   // AI-Methodologist generation endpoint
   app.post("/api/generate-lesson", async (req: any, res: any) => {
     try {
-      const { subject, text, startPage, endPage, customModel } = req.body;
+      const { subject, text, startPage, endPage, customModel, expertStyle } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: "Текст вибраних сторінок порожній" });
       }
@@ -176,23 +176,67 @@ async function startServer() {
       const ai = getAiClient();
       const modelName = customModel || "gemini-3.5-flash";
 
-      const subject_lower = (subject || "").toLowerCase();
-      const isForeignLanguage =
-        subject_lower.includes("англ") || 
-        subject_lower.includes("english") || 
-        subject_lower.includes("німецьк") || 
-        subject_lower.includes("german") || 
-        subject_lower.includes("інозем") || 
-        subject_lower.includes("франц") || 
-        subject_lower.includes("french") ||
-        subject_lower.includes("іспан") || 
-        subject_lower.includes("spanish") ||
-        subject_lower.includes("foreign");
+      let selectedStyle = expertStyle || "auto";
+
+      // If "auto", detect style based on subject content
+      if (selectedStyle === "auto") {
+        const subject_lower = (subject || "").toLowerCase();
+        const isForeignLanguage =
+          subject_lower.includes("англ") || 
+          subject_lower.includes("english") || 
+          subject_lower.includes("німецьк") || 
+          subject_lower.includes("german") || 
+          subject_lower.includes("інозем") || 
+          subject_lower.includes("франц") || 
+          subject_lower.includes("french") ||
+          subject_lower.includes("іспан") || 
+          subject_lower.includes("spanish") ||
+          subject_lower.includes("foreign");
+
+        const isScience = 
+          subject_lower.includes("фізик") ||
+          subject_lower.includes("хім") ||
+          subject_lower.includes("біол") ||
+          subject_lower.includes("матем") ||
+          subject_lower.includes("геогр") ||
+          subject_lower.includes("астрон") ||
+          subject_lower.includes("інформ") ||
+          subject_lower.includes("алгебр") ||
+          subject_lower.includes("геом") ||
+          subject_lower.includes("physics") ||
+          subject_lower.includes("math") ||
+          subject_lower.includes("chem") ||
+          subject_lower.includes("biology");
+
+        const isHistory = 
+          subject_lower.includes("істор") || 
+          subject_lower.includes("history") ||
+          subject_lower.includes("суспільств") ||
+          subject_lower.includes("право");
+
+        const isLiterature = 
+          subject_lower.includes("літер") || 
+          subject_lower.includes("літератур") ||
+          subject_lower.includes("мов") ||
+          subject_lower.includes("укр");
+
+        if (isForeignLanguage) {
+          selectedStyle = "immersive";
+        } else if (isScience) {
+          selectedStyle = "detective";
+        } else if (isHistory) {
+          selectedStyle = "thriller";
+        } else if (isLiterature) {
+          selectedStyle = "profiling";
+        } else {
+          selectedStyle = "quest";
+        }
+      }
 
       let style_instruction = "";
       let additional_methodology_guidance = "";
 
-      if (isForeignLanguage) {
+      if (selectedStyle === "immersive") {
         style_instruction = "Стиль: Лінгвістичний коучинг та інтерактивне занурення (Language Immersion Coach). Фокусуйся на живій розмовній практиці, корисній лексиці замість абстрактного зазубрювання та практичних життєвих сценаріях.";
         additional_methodology_guidance = `
 ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ ІНОЗЕМНОЇ МОВИ:
@@ -204,21 +248,7 @@ async function startServer() {
    - Теза #3 (Аутентичний нюанс): Тонкощі вживання, сленг або типова помилка, якої треба уникати. Метафора обов'язкова.
 4. 'flashcards': Головні слова, вирази або граматичні конструкції.
 `;
-      } else if (
-        subject_lower.includes("фізик") ||
-        subject_lower.includes("хім") ||
-        subject_lower.includes("біол") ||
-        subject_lower.includes("матем") ||
-        subject_lower.includes("геогр") ||
-        subject_lower.includes("астрон") ||
-        subject_lower.includes("інформ") ||
-        subject_lower.includes("алгебр") ||
-        subject_lower.includes("геом") ||
-        subject_lower.includes("physics") ||
-        subject_lower.includes("math") ||
-        subject_lower.includes("chem") ||
-        subject_lower.includes("biology")
-      ) {
+      } else if (selectedStyle === "detective") {
         style_instruction = "Стиль: Науковий детектив (Scientific Detective). Фокусуйся на причинах та наслідках, експериментах та дослідженні законів природи.";
         additional_methodology_guidance = `
 ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ ПРИРОДНИЧИХ ТА МАТЕМАТИЧНИХ НАУК:
@@ -230,17 +260,41 @@ async function startServer() {
    - Теза #3 (Практичне застосування): Де цей закон чи метод зумовлює роботу приладів або явищ у реальному світі. Метафора обов'язкова.
 4. 'flashcards': Формули або фундаментальні правила/поняття.
 `;
-      } else {
-        style_instruction = "Стиль: Інтелектуальний квест (Intellectual Quest / Detective). Фокусуйся на закономірностях, системному мисленні та прихованих сенсах.";
+      } else if (selectedStyle === "thriller") {
+        style_instruction = "Стиль: Політичний / історичний трилер (Political / Historical Thriller). Фокусуйся на інтригах, боротьбі за владу, таємних змовах, причинах конфліктів та вирішальних суспільних виборах.";
         additional_methodology_guidance = `
-ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ КЛАСИЧНИХ ДИСЦИПЛІН:
-1. 'themeTitle': Інтригуюча назва з глибоким сенсом.
-2. 'missionBriefing': Практичне завдання-квест для розв'язання інтелектуальної загадки.
+ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ ІСТОРІЇ ТА СУСПІЛЬНИХ НАУК:
+1. 'themeTitle': Має звучати як динамічний заголовок трилера (наприклад: "Таємна гра УЦР: 4-й Універсал як геополітичний рубіж").
+2. 'missionBriefing': Коротка інтригуюча місія про прогнозування ходів опонентів, розкриття таємниць чи дипломатичний виклик.
+3. 'theses': Розкривай матеріал як логіку зіткнення інтересів та сил:
+   - Теза #1 (Конфлікт сили): Хто і чому протистояв. Метафора обов'язкова.
+   - Теза #2 (Секретний важіль): Головна подія, декрет чи компроміс, що змінили хід гри. Метафора обов'язкова.
+   - Теза #3 (Уроки історії): Яку ціну заплатило суспільство та який життєвий урок лишився за кулісами. Метафора обов'язкова.
+4. 'flashcards': Ключові історичні постаті, дати або поворотні концепції.
+`;
+      } else if (selectedStyle === "profiling") {
+        style_instruction = "Стиль: Психопрофайлінг та мотиви характерів (Psychological Profiling). Фокусуйся на прихованих психологічних мотивах персонажів, авторів, індивідуальних прагненнях та аналізі душевного стану героїв.";
+        additional_methodology_guidance = `
+ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ ГУМАНІТАРНИХ ДИСЦИПЛІН ТА ЛІТЕРАТУРИ:
+1. 'themeTitle': Інтригуюча назва, що розкриває внутрішній світ твору чи автора (наприклад: "Маски героїв: Психопрофайл Кайдашевої сім'ї").
+2. 'missionBriefing': Завдання проаналізувати почуття, розібратися у душевній кризі чи провести розслідування психотипу дійових осіб.
+3. 'theses': Мають занурити учня у розуміння характерів:
+   - Теза #1 (Внутрішнє роздоріжжя): Основна дилема або травма героя/суспільства. Метафора обов'язкова.
+   - Теза #2 (Соціальний резонанс або Крок у глибину): Як конфлікт проявляється в мові чи діях. Метафора обов'язкова.
+   - Теза #3 (Катарсис / Життєвий інсайт): Чому цей досвід корисний для нашого емоційного інтелекту. Метафора обов'язкова.
+4. 'flashcards': Виразні цитати, символічні образи або художні деталі.
+`;
+      } else {
+        style_instruction = "Стиль: Інтелектуальний квест і системні закономірності (Logical Quest). Фокусуйся на закономірностях, системному мисленні, логічних зв'язках та відкритті прихованих сенсів у матеріалі.";
+        additional_methodology_guidance = `
+ОСОБЛИВІ МЕТОДИЧНІ ВИМОГИ ДЛЯ КВЕСТ-НАВЧАННЯ:
+1. 'themeTitle': Інтригуюча системна назва з глибоким сенсом.
+2. 'missionBriefing': Практичне завдання-квест для розв'язання інтелектуальної загадки або побудови причинно-наслідкової карти.
 3. 'theses': Мають допомогти учневі знайти прихований взаємозв'язок у матеріалі:
-   - Теза #1 (Концептуальне ядро): Головна ідея параграфа. Метафора обов'язкова.
-   - Теза #2 (Глибинний аналіз): Чому це важливо, як це влаштовано зсередини. Метафора обов'язкова.
-   - Теза #3 (Практичний висновок): Чому це знання корисне для реального життя. Метафора обов'язкова.
-4. 'flashcards': Визначення, поняття або терміни.
+   - Теза #1 (Концептуальне ядро): Головна ідея розділу. Метафора обов'язкова.
+   - Теза #2 (Глибинний аналіз / Системні шестерні): Чому це важливо і як це працює в ланцюжку. Метафора обов'язкова.
+   - Теза #3 (Практичний висновок): Чому це знання корисне для реального життя та прийняття рішень. Метафора обов'язкова.
+4. 'flashcards': Визначення, ключові поняття або терміни.
 `;
       }
 
