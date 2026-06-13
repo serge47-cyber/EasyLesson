@@ -1,10 +1,60 @@
 @import "tailwindcss";
 
 @theme {
-  --color-slate-850: #1e293b; /* Premium slate containers */
-  --color-slate-805: #0f172a; /* Deep slate boundaries */
-  --color-slate-905: #090f1e; /* High contrast sidebar bg */
-  --color-slate-910: #020617; /* Immersion deep space blue canvas */
+  --color-slate-910: var(--slate-910);
+  --color-slate-905: var(--slate-905);
+  --color-slate-850: var(--slate-850);
+  --color-slate-805: var(--slate-805);
+  
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-350: var(--slate-350);
+  --color-slate-300: var(--slate-300);
+  --color-slate-200: var(--slate-200);
+  --color-slate-100: var(--slate-100);
+}
+
+:root {
+  /* Premium Dark Theme variables matching original visual design */
+  --slate-950: #020617;
+  --slate-910: #020617;
+  --slate-905: #090f1e;
+  --slate-900: #0f172a;
+  --slate-850: #1e293b;
+  --slate-805: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-350: #cbd5e1;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+}
+
+html.light {
+  /* Crisp, Academic, High-Contrast Light Theme for perfect readability */
+  --slate-950: #f8fafc;
+  --slate-910: #f1f5f9;
+  --slate-905: #ffffff;
+  --slate-900: #f8fafc;
+  --slate-850: #ffffff;
+  --slate-805: #cbd5e1;
+  --slate-800: #e2e8f0;
+  --slate-700: #cbd5e1;
+  --slate-600: #94a3b8;
+  --slate-500: #64748b;
+  --slate-400: #475569;   /* Crisp read context slate */
+  --slate-350: #1e293b;   /* Solid subtext */
+  --slate-300: #0f172a;   /* Primary body text dark slate */
+  --slate-200: #020617;   /* Headers and focused texts */
+  --slate-100: #000000;   /* Pure contrast black-blue text */
 }
 
 /* 3D perspective styles for Flashcards */

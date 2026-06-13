@@ -16,11 +16,15 @@ import {
   FilePlus,
   Loader,
   Trash2,
-  RefreshCcw
+  RefreshCcw,
+  Sun,
+  Moon,
+  Monitor
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Textbook, GeneratedLesson } from "./types";
 import { getApiUrl } from "./utils/api";
+import { exportToWord, exportToPrintPDF } from "./utils/export";
 
 // Import custom views
 import ThesesView from "./components/ThesesView";
@@ -80,8 +84,110 @@ export default function App() {
   const [generatedLesson, setGeneratedLesson] = useState<GeneratedLesson | null>(null);
   const [activeTab, setActiveTab] = useState<"theses" | "cards" | "quiz" | "solver" | "chat">("theses");
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // System-preference aware Theme management state
+  const [theme, setTheme] = useState<"light" | "dark" | "system">(
+    () => (localStorage.getItem("ai_methodologist_theme") as any) || "system"
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      let activeTheme = theme;
+      if (theme === "system") {
+        activeTheme = mediaQuery.matches ? "dark" : "light";
+      }
+
+      if (activeTheme === "light") {
+        root.classList.add("light");
+        root.classList.remove("dark");
+      } else {
+        root.classList.add("dark");
+        root.classList.remove("light");
+      }
+    };
+
+    applyTheme();
+
+    const listener = () => {
+      if (theme === "system") {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, [theme]);
+
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    localStorage.setItem("ai_methodologist_theme", newTheme);
+  };
   const [customModel, setCustomModel] = useState("gemini-3.5-flash");
   const [expertStyle, setExpertStyle] = useState<string>("auto");
+
+  // Server Status monitoring (Render Cold Start)
+  const [serverStatus, setServerStatus] = useState<"checking" | "online" | "coldstart" | "error">("checking");
+  const [serverStatusAttempts, setServerStatusAttempts] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    let intervalId: any = null;
+    
+    const checkHealth = async (): Promise<boolean> => {
+      try {
+        const controller = new AbortController();
+        const tId = setTimeout(() => controller.abort(), 6000);
+        
+        const res = await fetch(getApiUrl("/api/health"), { 
+          signal: controller.signal,
+          cache: "no-store"
+        });
+        clearTimeout(tId);
+        
+        if (res.ok) {
+          if (isMounted) {
+            setServerStatus("online");
+          }
+          return true;
+        }
+      } catch (err) {
+        console.warn("Server cold start check failed/timed out:", err);
+      }
+      return false;
+    };
+
+    const initCheck = async () => {
+      const ok = await checkHealth();
+      if (ok) return;
+
+      if (isMounted) {
+        setServerStatus("coldstart");
+      }
+
+      let count = 0;
+      intervalId = setInterval(async () => {
+        count++;
+        if (isMounted) setServerStatusAttempts(count);
+        const isOnline = await checkHealth();
+        if (isOnline || count >= 15) {
+          clearInterval(intervalId);
+          if (!isOnline && isMounted) {
+            setServerStatus("error");
+          }
+        }
+      }, 4000);
+    };
+
+    initCheck();
+
+    return () => {
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
 
   // Local storage for hidden default books
   const [hiddenBookIds, setHiddenBookIds] = useState<string[]>([]);
@@ -505,7 +611,7 @@ export default function App() {
                 <GraduationCap className="w-6 h-6 text-slate-950" />
               </div>
               <div>
-                <h1 className="text-base md:text-lg font-extrabold tracking-tight text-white flex items-center gap-1.5 font-sans">
+                <h1 className="text-base md:text-lg font-extrabold tracking-tight text-slate-100 flex items-center gap-1.5 font-sans">
                   АІ-Методист <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent text-xs font-bold uppercase tracking-widest border border-cyan-500/30 px-1.5 py-0.2 rounded">Школа 10/11</span>
                 </h1>
                 <p className="text-[10px] text-slate-400 font-normal">
@@ -515,6 +621,34 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Server Status Indicators */}
+              <div className="flex items-center gap-1.5">
+                {serverStatus === "online" && (
+                  <span className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/22 text-emerald-400 text-[10px] md:text-xs font-semibold px-2 md:px-2.5 py-1 rounded-xl shadow-sm" title="Зв'язок із сервером стабільний">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>Сервер: Онлайн</span>
+                  </span>
+                )}
+                {serverStatus === "checking" && (
+                  <span className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[10px] md:text-xs font-semibold px-2 md:px-2.5 py-1 rounded-xl animate-pulse" title="Перевірка з'єднання...">
+                    <Loader className="w-3 h-3 animate-spin text-amber-300" />
+                    <span>Сервер: З'єднання</span>
+                  </span>
+                )}
+                {serverStatus === "coldstart" && (
+                  <span className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[10px] md:text-xs font-semibold px-2 md:px-2.5 py-1 rounded-xl animate-pulse" title="Безкоштовний хостинг Render запускає контейнер">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping"></span>
+                    <span>Сервер: Старт ({serverStatusAttempts * 4}с)</span>
+                  </span>
+                )}
+                {serverStatus === "error" && (
+                  <span className="flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] md:text-xs font-semibold px-2 md:px-2.5 py-1 rounded-xl" title="При виконанні запитів можливі затримки">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                    <span>Сервер: Офлайн</span>
+                  </span>
+                )}
+              </div>
+
               {/* Active Section Label with dynamic badge */}
               <div className="hidden lg:flex items-center gap-2 text-cyan-400 text-xs bg-cyan-400/10 px-3 py-1 rounded-full border border-cyan-400/20">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
@@ -535,9 +669,59 @@ export default function App() {
                   <option value="gemini-3.1-flash-lite" className="bg-slate-900">Gemini 3.1 Flash Lite</option>
                 </select>
               </div>
+
+              {/* Theme Selector Button Group */}
+              <div className="flex items-center gap-1 bg-slate-850 border border-slate-755/65 p-1 rounded-lg text-xs select-none">
+                <button
+                  id="theme-btn-light"
+                  onClick={() => handleThemeChange("light")}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    theme === "light"
+                      ? "bg-slate-700 text-amber-500 font-semibold"
+                      : "text-slate-400 hover:text-slate-300"
+                  }`}
+                  title="Світла тема"
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  id="theme-btn-dark"
+                  onClick={() => handleThemeChange("dark")}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    theme === "dark"
+                      ? "bg-slate-700 text-cyan-400 font-semibold"
+                      : "text-slate-400 hover:text-slate-300"
+                  }`}
+                  title="Темна тема"
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  id="theme-btn-system"
+                  onClick={() => handleThemeChange("system")}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    theme === "system"
+                      ? "bg-slate-700 text-teal-400 font-semibold"
+                      : "text-slate-400 hover:text-slate-300"
+                  }`}
+                  title="Системна тема"
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </header>
+
+        {/* SERVER COLDSTART WARNING BANNER */}
+        {serverStatus === "coldstart" && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-200 py-3 px-4 md:px-8 text-xs md:text-sm flex items-center justify-center gap-2.5 flex-shrink-0 animate-pulse relative z-15">
+            <Loader className="w-4 h-4 animate-spin text-amber-400 flex-shrink-0" />
+            <div className="text-center md:text-left leading-normal">
+              <span className="font-bold text-amber-300">💡 Сервер гріє мотори:</span> Безкоштовний хостинг Render «засинає» після 15 хвилин простою. Його активація (холодний старт) триває близько 30–45 секунд. Будь ласка, зачекайте — ваші уроки підготуються та завантажаться автоматично, як тільки контейнер активується ({serverStatusAttempts > 0 ? `спроба #${serverStatusAttempts}` : "ініціалізація..."}).
+            </div>
+          </div>
+        )}
 
       {/* ERROR TOAST BAR */}
       {apiError && (
@@ -927,14 +1111,32 @@ export default function App() {
                         {generatedLesson.themeTitle}
                       </h2>
                     </div>
-                    {/* Clear active lesson to return to preloading illustration choice */}
-                    <button
-                      id="close-lesson-btn"
-                      onClick={() => setGeneratedLesson(null)}
-                      className="px-4 py-2 border border-slate-800 bg-slate-900 text-slate-300 hover:text-white rounded-xl text-xs font-medium cursor-pointer transition-all hover:bg-slate-850"
-                    >
-                      Назад до вибору сторінок
-                    </button>
+                    {/* Export and Close Controls */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        id="export-pdf-btn"
+                        onClick={() => exportToPrintPDF(generatedLesson, activeBook)}
+                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm rounded-xl"
+                        title="Зберегти як PDF або роздрукувати"
+                      >
+                        🖨️ Друк / PDF
+                      </button>
+                      <button
+                        id="export-word-btn"
+                        onClick={() => exportToWord(generatedLesson, activeBook)}
+                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm rounded-xl"
+                        title="Завантажити у форматі Microsoft Word (.doc)"
+                      >
+                        📄 Експорт Word
+                      </button>
+                      <button
+                        id="close-lesson-btn"
+                        onClick={() => setGeneratedLesson(null)}
+                        className="px-3.5 py-2 border border-slate-800 bg-slate-900 text-slate-350 hover:text-white rounded-xl text-xs font-medium cursor-pointer transition-all hover:bg-slate-850"
+                      >
+                        Назад до вибору сторінок
+                      </button>
+                    </div>
                   </div>
 
                   {/* Objective Mission Briefing Panel with immersive style */}
