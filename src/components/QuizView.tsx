@@ -6,9 +6,10 @@ import { QuizQuestion } from "../types";
 interface QuizViewProps {
   quiz: QuizQuestion[];
   subject: string;
+  onTabChange?: (tab: "theses" | "cards" | "quiz" | "solver" | "chat") => void;
 }
 
-export default function QuizView({ quiz, subject }: QuizViewProps) {
+export default function QuizView({ quiz, subject, onTabChange }: QuizViewProps) {
   const [currentQuestIndex, setCurrentQuestIndex] = useState(0);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [quizFinished, setQuizFinished] = useState(false);
@@ -174,29 +175,47 @@ export default function QuizView({ quiz, subject }: QuizViewProps) {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-slate-100">Результат Вашого бліцу</h3>
-              <p className="text-slate-400 text-sm max-w-sm mx-auto">
+              <h3 className="text-2xl font-bold text-slate-100 font-sans">Результат вашого бліцу</h3>
+              <p className="text-slate-400 text-xs md:text-sm max-w-sm mx-auto leading-relaxed">
                 {score === quiz.length
-                  ? "Чудова робота! Ви повністю оволоділи матеріалом цих сторінок підручника. 🕵️‍♂️"
-                  : "Непогано, але деякі речі вимагають увані. Перечитайте тези або зверніться до нашого АІ-тьютора за підказкою!"}
+                  ? "Чудова робота! Ви повністю оволоділи матеріалом цих сторінок підручника. 🎯"
+                  : "Непогано, але деякі речі вимагають додаткової уваги. Перечитайте тези або зверніться до нашого АІ-тьютора за підказкою! 🔍"}
               </p>
             </div>
 
             <div className="text-5xl font-mono font-bold text-slate-100 flex items-center justify-center gap-2">
-              <span className={score === quiz.length ? "text-emerald-400" : "text-sky-450"}>{score}</span>
+              <span className={score === quiz.length ? "text-emerald-400" : "text-sky-400"}>{score}</span>
               <span className="text-slate-600 text-3xl">/</span>
               <span className="text-slate-500 text-3xl">{quiz.length}</span>
             </div>
 
-            <div className="flex justify-center gap-4">
-              <button
-                id="restart-quiz-btn"
-                onClick={handleRestart}
-                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4 text-slate-400" />
-                <span>Спробувати знову</span>
-              </button>
+            <div className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl space-y-3.5 max-w-md mx-auto">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-[#38bdf8] text-center">🏁 Рекомендовані наступні кроки</h4>
+              <div className="flex flex-col gap-2">
+                {onTabChange && (
+                  <>
+                    <button
+                      onClick={() => onTabChange("solver")}
+                      className="w-full py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      🧩 Перейти до покрокового розбору задач
+                    </button>
+                    <button
+                      onClick={() => onTabChange("chat")}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      💬 Задати запитання Тьютору ШІ
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleRestart}
+                  className="w-full mt-1.5 py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-350 hover:text-slate-250 border border-slate-800 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4 text-slate-400" />
+                  <span>Спробувати пройти квіз знову</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

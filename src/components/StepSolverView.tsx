@@ -6,9 +6,10 @@ import { StepByStepProblem } from "../types";
 interface StepSolverViewProps {
   problems: StepByStepProblem[];
   subject: string;
+  onTabChange?: (tab: "theses" | "cards" | "quiz" | "solver" | "chat") => void;
 }
 
-export default function StepSolverView({ problems, subject }: StepSolverViewProps) {
+export default function StepSolverView({ problems, subject, onTabChange }: StepSolverViewProps) {
   // Map problem index to current revealed step index (0 means none, 1 means step 1, etc.)
   const [revealedSteps, setRevealedSteps] = useState<{ [problemIdx: number]: number }>({});
 
@@ -65,11 +66,13 @@ export default function StepSolverView({ problems, subject }: StepSolverViewProp
             >
               {/* Problem Statement Header */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-md ${colors.bg} ${colors.text} border ${colors.border}`}>
-                    Завдання {pIndex + 1}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-md ${colors.bg} ${colors.text} border ${colors.border}`}>
+                    Завдання {pIndex + 1} з {problems.length}
                   </span>
-                  <span className="text-xs text-slate-500">Рівень: 10-11 Клас</span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {pIndex === problems.length - 1 ? "• Фінальний розбір завдання цієї теми ✨" : "• Наступна задача у списку"}
+                  </span>
                 </div>
                 <h3 className="text-base md:text-lg text-slate-100 font-medium leading-relaxed font-sans">
                   {prob.problem}
@@ -183,9 +186,47 @@ export default function StepSolverView({ problems, subject }: StepSolverViewProp
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   ) : (
-                    <div className="flex items-center gap-2 text-xs md:text-sm text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 rounded-xl ml-auto">
-                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                      <span>Повний розв'язок розкрито та проаналізовано!</span>
+                    <div className="w-full space-y-4 ml-auto">
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 rounded-xl justify-center font-bold">
+                        <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400 animate-bounce" />
+                        <span>Вітаємо! Повний покроковий розв'язок розкрито та повністю проаналізовано! 🎉</span>
+                      </div>
+                      
+                      {/* Interactive finished footer directing user on what to study next */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-5 bg-slate-950/40 border border-slate-800/80 rounded-xl space-y-3"
+                      >
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-[#38bdf8]">🏁 Що робити далі?</h4>
+                        <p className="text-xs text-slate-300">
+                          Більше запланованих задач у цьому параграфі немає. Оберіть наступний крок вашого навчання:
+                        </p>
+                        <div className="flex flex-wrap gap-2.5 pt-1">
+                          {onTabChange && (
+                            <>
+                              <button
+                                onClick={() => onTabChange("quiz")}
+                                className="px-3.5 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                              >
+                                ❓ Пройти Бліц-квіз
+                              </button>
+                              <button
+                                onClick={() => onTabChange("cards")}
+                                className="px-3.5 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 hover:text-purple-300 border border-purple-500/20 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                              >
+                                📋 Повторити Флеш-картки
+                              </button>
+                              <button
+                                onClick={() => onTabChange("chat")}
+                                className="px-3.5 py-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-350 border border-sky-500/20 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                              >
+                                💬 Задати питання Тьютору ШІ
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </motion.div>
                     </div>
                   )}
                 </div>

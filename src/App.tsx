@@ -1220,13 +1220,13 @@ export default function App() {
                     <ThesesView theses={generatedLesson.theses} subject={activeBook.subject} />
                   )}
                   {activeTab === "cards" && (
-                    <FlashcardsView cards={generatedLesson.flashcards} subject={activeBook.subject} />
+                    <FlashcardsView cards={generatedLesson.flashcards} subject={activeBook.subject} onTabChange={setActiveTab} />
                   )}
                   {activeTab === "quiz" && (
-                    <QuizView quiz={generatedLesson.quiz} subject={activeBook.subject} />
+                    <QuizView quiz={generatedLesson.quiz} subject={activeBook.subject} onTabChange={setActiveTab} />
                   )}
                   {activeTab === "solver" && (
-                    <StepSolverView problems={generatedLesson.stepByStepProblems} subject={activeBook.subject} />
+                    <StepSolverView problems={generatedLesson.stepByStepProblems} subject={activeBook.subject} onTabChange={setActiveTab} />
                   )}
                   {activeTab === "chat" && (
                     <TutorChatView 

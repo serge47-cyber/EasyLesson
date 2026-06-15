@@ -6,9 +6,10 @@ import { Flashcard } from "../types";
 interface FlashcardsViewProps {
   cards: Flashcard[];
   subject: string;
+  onTabChange?: (tab: "theses" | "cards" | "quiz" | "solver" | "chat") => void;
 }
 
-export default function FlashcardsView({ cards, subject }: FlashcardsViewProps) {
+export default function FlashcardsView({ cards, subject, onTabChange }: FlashcardsViewProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -30,23 +31,83 @@ export default function FlashcardsView({ cards, subject }: FlashcardsViewProps) 
     return "border-sky-500/50 hover:border-sky-500 shadow-[0_0_15px_rgba(56,189,248,0.05)]";
   };
 
+  const isFinished = currentIndex === cards.length;
   const currentCard = cards[currentIndex];
 
   const handleNext = () => {
     setIsFlipped(false);
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % cards.length);
+      if (currentIndex < cards.length) {
+        setCurrentIndex((prev) => prev + 1);
+      } else {
+        setCurrentIndex(0);
+      }
     }, 150);
   };
 
   const handlePrev = () => {
     setIsFlipped(false);
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length);
+      if (currentIndex > 0) {
+        setCurrentIndex((prev) => prev - 1);
+      } else {
+        setCurrentIndex(cards.length);
+      }
     }, 150);
   };
 
   if (!cards || cards.length === 0) return null;
+
+  if (isFinished) {
+    return (
+      <div id="flashcards-finished-section" className="space-y-6 flex flex-col items-center justify-center py-8 px-4 text-center">
+        <div className="inline-flex justify-center items-center w-16 h-16 rounded-2xl bg-slate-100/5 border border-slate-800 animate-pulse">
+          <Layers className="w-8 h-8 text-purple-400" />
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xl md:text-2xl font-bold text-slate-100 font-sans">🎉 Усі картки успішно вивчено!</h3>
+          <p className="text-slate-400 text-xs md:text-sm max-w-sm mx-auto leading-relaxed">
+            Ви щойно проглянули всю колоду з <strong className="text-slate-200">{cards.length}</strong> флеш-карток. Чудова підготовка для самоконтролю!
+          </p>
+        </div>
+
+        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-3.5 w-full max-w-md">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-[#38bdf8] text-center md:text-left">🏁 Що робити далі?</h4>
+          <div className="flex flex-col gap-2">
+            {onTabChange && (
+              <>
+                <button
+                  onClick={() => onTabChange("quiz")}
+                  className="w-full py-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 hover:text-emerald-350 border border-emerald-500/20 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  ❓ Натисніть тут для проходження Бліц-квізу
+                </button>
+                <button
+                  onClick={() => onTabChange("solver")}
+                  className="w-full py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-450 hover:text-sky-300 border border-sky-500/20 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  🧩 Покроковий розбір складних задач
+                </button>
+                <button
+                  onClick={() => onTabChange("chat")}
+                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-250 border border-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  💬 Задати питання Тьютору ШІ у чаті
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setCurrentIndex(0)}
+              className="w-full mt-2 py-2 border border-dashed border-slate-800 hover:border-slate-700 hover:bg-slate-850/60 text-xs font-medium text-slate-400 hover:text-slate-200 rounded-xl transition-all cursor-pointer"
+            >
+              🔄 Пройти картки заново
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="flashcards-section" className="space-y-6 flex flex-col items-center">
