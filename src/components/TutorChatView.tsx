@@ -82,7 +82,18 @@ export default function TutorChatView({ pageText, subject, bookTitle }: TutorCha
         })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const textError = await response.text();
+        console.error("Non-JSON Server Response from tutor-chat:", textError);
+        throw new Error(
+          `Сервер повернув некоректну відповідь (код ${response.status}). Можливо, сервер перезапускається чи засинає на безкоштовному хостингу.`
+        );
+      }
+
       if (response.ok && data.text) {
         const botMessageId = "msg-bot-" + Date.now();
         const botMsg: ChatMessage = {

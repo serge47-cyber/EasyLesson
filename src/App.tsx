@@ -432,7 +432,18 @@ export default function App() {
           body: formData,
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get("content-type");
+        let data;
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json();
+        } else {
+          const textError = await response.text();
+          console.error("Non-JSON Server Response during upload:", textError);
+          throw new Error(
+            `Сервер повернув некоректну відповідь (код ${response.status}). Можливо, файл занадто великий або сервер перезапускається.`
+          );
+        }
+
         if (!response.ok) {
           throw new Error(data.error || "Не вдалося зчитати PDF ні локально, ні сервером.");
         }
@@ -518,7 +529,18 @@ export default function App() {
         })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const textError = await response.text();
+        console.error("Non-JSON Server Response:", textError);
+        throw new Error(
+          `Сервер повернув некоректну відповідь (код ${response.status}). Можливо, сервер перезапускається, «спить» (безкоштовний тариф Render засинає через простій) або виникла внутрішня помилка сервісу. Будь ласка, зачекайте 30-60 секунд та спробуйте ще раз.`
+        );
+      }
+
       if (response.ok && data.themeTitle) {
         setGeneratedLesson(data);
         setActiveTab("theses");
